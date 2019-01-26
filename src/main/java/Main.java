@@ -12,12 +12,9 @@ import ws.schild.jave.EncodingAttributes;
 import ws.schild.jave.MultimediaObject;
 
 import javax.sound.sampled.AudioInputStream;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class Main {
     public static void main(String[] args) throws Exception{
@@ -31,6 +28,7 @@ public class Main {
         String articleText = ArticleExtractor.INSTANCE.getText(urlObject);
 
         ctx.header("content-type", "audio/mp3");
+        ctx.header("cache-control", "public, max-age=86400");
         InputStream fio = FileUtils.openInputStream(convertToAudio(articleText));
         ctx.result(fio);
     }
@@ -39,7 +37,9 @@ public class Main {
         LocalMaryInterface mary = null;
         try {
             mary = new LocalMaryInterface();
+            mary.setVoice("cmu-rms-hsmm");
             mary.setInputType("TEXT");
+            mary.setAudioEffects("JetPilot,Volume(amount:1.6)");
         } catch (MaryConfigurationException e) {
             System.err.println("Could not initialize MaryTTS interface: " + e.getMessage());
             throw e;
@@ -66,7 +66,8 @@ public class Main {
 
         Encoder encoder = new Encoder();
         encoder.encode(new MultimediaObject(wavFile), mp3File, attrs);
-
+        wavFile.delete();
+        mp3File.deleteOnExit();
         return mp3File;
     }
 }
