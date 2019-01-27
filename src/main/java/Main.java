@@ -1,4 +1,5 @@
-import de.l3s.boilerpipe.extractors.ArticleExtractor;
+import com.chimbori.crux.articles.Article;
+import com.chimbori.crux.articles.ArticleExtractor;
 import io.javalin.Context;
 import io.javalin.Javalin;
 import marytts.LocalMaryInterface;
@@ -15,17 +16,27 @@ import javax.sound.sampled.AudioInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Scanner;
 
 public class Main {
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) {
         Javalin app = Javalin.create().start(4567);
         app.get("/mp3", ctx -> generateMP3(ctx));
+        app.get("/text", ctx -> ctx.result(generateText(ctx.queryParam("src"))));
+    }
+
+    private static String generateText(String resource) throws Exception {
+        String rawHtml = new Scanner(new URL(resource).openStream(), "UTF-8").useDelimiter("\\A").next();
+
+        Article article = ArticleExtractor.with(resource, rawHtml).extractMetadata().extractContent().article();
+
+        String out = "Text to Speech for " + resource + ".\r\nTitled: " + article.title + ".\r\n\r\n" + article.document.text();
+
+        return out;
     }
 
     private static void generateMP3(Context ctx) throws Exception {
-        URL urlObject = new URL(ctx.queryParam("src"));
-
-        String articleText = ArticleExtractor.INSTANCE.getText(urlObject);
+        String articleText = generateText(ctx.queryParam("src"));
 
         ctx.header("content-type", "audio/mp3");
         ctx.header("cache-control", "public, max-age=86400");
